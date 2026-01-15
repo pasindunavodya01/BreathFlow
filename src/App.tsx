@@ -4,6 +4,7 @@ import { type BreathingPattern, PRESETS } from './types/breathing';
 import { MeditationTypes } from './components/MeditationTypes';
 import { CustomPatternEditor } from './components/CustomPatternEditor';
 import { Reports } from './components/Reports';
+import { PiPVisualizer } from './components/PiPVisualizer';
 import { getSessions, saveSession } from './utils/storage';
 
 function App() {
@@ -46,12 +47,15 @@ function App() {
         <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
           BreathFlow
         </h1>
-        <button 
-          onClick={() => setShowReports(true)}
-          className="p-2 text-slate-400 hover:text-white transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-        </button>
+        <div className="flex items-center gap-2">
+            <PiPVisualizer isActive={isActive} phase={phase} timeLeft={timeLeft} />
+            <button
+              onClick={() => setShowReports(true)}
+              className="p-2 text-slate-400 hover:text-white transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            </button>
+        </div>
       </header>
 
       {/* Main Content */}
