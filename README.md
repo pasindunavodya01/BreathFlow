@@ -1,73 +1,60 @@
-# React + TypeScript + Vite
+# 🧘‍♂️ Breathing Guide App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A simple web app I built to help maintain proper breathing during deep focus sessions like coding or problem-solving.
 
-Currently, two official plugins are available:
+When I get fully focused, I tend to forget to breathe properly 😅 — so I created this tool to stay calm, focused, and consistent.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## ✨ Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Guided breathing patterns for different situations:
+  - 🔲 **Box Breathing** – reduce stress and regain control
+  - 🌙 **3–7–8 Breathing** – calm down quickly
+  - 😌 **Relaxing Breathing** – slow breathing for relaxation
+  - 🌊 **Coherent Breathing** – maintain steady focus
+  - ⚙️ **Custom Mode** – define your own breathing rhythm
 
-## Expanding the ESLint configuration
+- 📺 **Picture-in-Picture (PiP) Mode**
+  - Keep the breathing guide visible while working
+  - Useful for multitasking during coding sessions
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🛠 Tech Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Frontend: React
+- State Management: React Hooks
+- Browser APIs: Picture-in-Picture API
+- Styling: (Add Tailwind / CSS if you used)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🚀 How It Works
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Select a breathing pattern based on your current need
+- Follow the visual guide for inhale, hold, and exhale
+- Use PiP mode to keep the guide running while you work
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+
+## 💻 Platform Support
+
+- ✅ **PC / Laptop** – fully supported  
+- ✅ **Android** – PiP works even when the screen is locked  
+
+### 🍎 iPhone Note
+- ❌ PiP and background execution are not supported  
+- ❌ Session stops when the screen locks  
+
+This limitation is due to **iOS browser restrictions**, not the app itself.
+
+---
+
+## 📦 Installation
+
+```bash
+git clone <your-repo-link>
+cd project
+npm install
+npm run dev
