@@ -25,7 +25,7 @@ When I get fully focused, I tend to forget to breathe properly 😅 — so I cre
 
 - Frontend: React
 - State Management: React Hooks
-- Browser APIs: Picture-in-Picture API
+- Browser APIs: Picture-in-Picture API, Screen Wake Lock API
 - Styling: (Add Tailwind / CSS if you used)
 
 ---
@@ -45,9 +45,10 @@ When I get fully focused, I tend to forget to breathe properly 😅 — so I cre
 
 ### 🍎 iPhone Note
 - ❌ PiP and background execution are not supported  
-- ❌ Session stops when the screen locks  
+- ⚠️ Session stops when the screen is manually locked  
+- ✅ Screen automatically stays awake during sessions (iOS 16.4+)
 
-This limitation is due to **iOS browser restrictions**, not the app itself.
+These limitations are due to **iOS browser restrictions**, not the app itself.
 
 ---
 

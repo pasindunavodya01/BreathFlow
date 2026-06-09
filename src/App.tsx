@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useBreathing } from './hooks/useBreathing';
+import { useWakeLock } from './hooks/useWakeLock';
 import { type BreathingPattern, PRESETS } from './types/breathing';
 import { MeditationTypes } from './components/MeditationTypes';
 import { CustomPatternEditor } from './components/CustomPatternEditor';
@@ -13,6 +14,16 @@ function App() {
   const [showReports, setShowReports] = useState(false);
   
   const { phase, timeLeft, isActive, totalTime, start, pause, stop } = useBreathing(pattern);
+  const { isSupported, requestWakeLock, releaseWakeLock } = useWakeLock();
+
+  useEffect(() => {
+    if (isActive) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+    return () => { releaseWakeLock(); };
+  }, [isActive, requestWakeLock, releaseWakeLock]);
 
   // Auto-save when stopping manually or finishing (if we had auto-finish)
   const handleStop = () => {
