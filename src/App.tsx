@@ -14,7 +14,7 @@ function App() {
   const [showReports, setShowReports] = useState(false);
   
   const { phase, timeLeft, isActive, totalTime, start, pause, stop } = useBreathing(pattern);
-  const { isSupported, requestWakeLock, releaseWakeLock } = useWakeLock();
+  const { requestWakeLock, releaseWakeLock } = useWakeLock();
 
   useEffect(() => {
     if (isActive) {
