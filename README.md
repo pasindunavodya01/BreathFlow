@@ -15,9 +15,11 @@ When I get fully focused, I tend to forget to breathe properly 😅 — so I cre
   - 🌊 **Coherent Breathing** – maintain steady focus
   - ⚙️ **Custom Mode** – define your own breathing rhythm
 
-- 📺 **Picture-in-Picture (PiP) Mode**
-  - Keep the breathing guide visible while working
-  - Useful for multitasking during coding sessions
+- 🔊 **Ambient sounds** — Rain, Waves, Wind; play/pause and choose per session
+- ⏱️ **Session timer** — set a duration in minutes (0 = unlimited); session stops and saves automatically when time is up
+- 🔔 **Phase cues (tones)** — short tones for inhale/hold/exhale; play in background on Android/desktop, paused on iOS when hidden
+
+- 📺 **Picture-in-Picture (PiP) Mode** — Keep the breathing guide visible while working
 
 ---
 
@@ -26,7 +28,7 @@ When I get fully focused, I tend to forget to breathe properly 😅 — so I cre
 - Frontend: React
 - State Management: React Hooks
 - Browser APIs: Picture-in-Picture API, Screen Wake Lock API
-- Styling: (Add Tailwind / CSS if you used)
+- Styling: Tailwind CSS
 
 ---
 
@@ -35,20 +37,22 @@ When I get fully focused, I tend to forget to breathe properly 😅 — so I cre
 - Select a breathing pattern based on your current need
 - Follow the visual guide for inhale, hold, and exhale
 - Use PiP mode to keep the guide running while you work
+- Toggle ambient sound with the audio button and choose Rain/Waves/Wind
+- Set a session duration using the `Duration (minutes)` input (desktop: top controls, mobile: compact input in controls). Set to `0` for an unlimited session
 
 ---
 
-## 💻 Platform Support
+## 💻 Platform & Background Behavior
 
-- ✅ **PC / Laptop** – fully supported  
-- ✅ **Android** – PiP works even when the screen is locked  
+- The app uses the native Screen Wake Lock API when available to keep the screen awake during sessions.
+- When native wake-lock is unavailable (notably some iOS versions), the app uses an audio-based fallback to keep sessions active.
+- Ambient audio is paused on iOS when the page is backgrounded to avoid noisy artifacts; ambient audio and phase cues continue on Android and desktop where browsers allow background audio.
 
-### 🍎 iPhone Note
-- ❌ PiP and background execution are not supported  
-- ⚠️ Session stops when the screen is manually locked  
-- ✅ Screen automatically stays awake during sessions (iOS 16.4+)
+### iOS specifics
+- iOS Safari / PWA: background execution and PiP have platform limits. The app mutes/pauses ambient when backgrounded and resumes when you return to the app. Phase cues are blocked while hidden on iOS to avoid unexpected sounds.
 
-These limitations are due to **iOS browser restrictions**, not the app itself.
+### Desktop browsers
+- Some browsers suspend Web Audio in background tabs. The app attempts to resume the WebAudio `AudioContext` for cues and falls back to a short WAV `HTMLAudioElement` beep when necessary so phase cues still play when minimized in most desktop browsers.
 
 ---
 
@@ -59,3 +63,4 @@ git clone <your-repo-link>
 cd project
 npm install
 npm run dev
+```
