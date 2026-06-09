@@ -67,6 +67,22 @@ export class AudioManager {
     }
   }
 
+  public muteBackground() {
+    if (this.backgroundAudio) {
+      try {
+        this.backgroundAudio.muted = true;
+      } catch {}
+    }
+  }
+
+  public unmuteBackground() {
+    if (this.backgroundAudio) {
+      try {
+        this.backgroundAudio.muted = false;
+      } catch {}
+    }
+  }
+
   private createWhiteNoiseBuffer(durationSeconds = 3): AudioBuffer {
     if (!this.audioContext) {
       throw new Error('AudioContext is not initialized');

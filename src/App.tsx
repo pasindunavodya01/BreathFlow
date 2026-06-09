@@ -39,10 +39,12 @@ function App() {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        // keep only the minimal background audio for wake lock; pause ambient
+        // pause ambient and mute background audio so it doesn't produce audible artifacts
         audioManager.pauseAmbient();
+        audioManager.muteBackground();
       } else {
-        // restore ambient if user had it enabled
+        // unmute background and restore ambient if user had it enabled
+        audioManager.unmuteBackground();
         if (isAmbientPlaying) audioManager.startAmbient(selectedAmbient);
       }
     };
