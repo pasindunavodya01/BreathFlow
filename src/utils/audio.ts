@@ -230,6 +230,7 @@ export class AudioManager {
 
   public playCue(phase: BreathingPhase) {
     if (!this.audioContext) return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return; // don't play cues while backgrounded/locked
 
     const osc = this.audioContext.createOscillator();
     const gain = this.audioContext.createGain();

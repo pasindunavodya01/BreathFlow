@@ -36,6 +36,21 @@ function App() {
     }
   }, [isAmbientPlaying, selectedAmbient]);
 
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        // keep only the minimal background audio for wake lock; pause ambient
+        audioManager.pauseAmbient();
+      } else {
+        // restore ambient if user had it enabled
+        if (isAmbientPlaying) audioManager.startAmbient(selectedAmbient);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isAmbientPlaying, selectedAmbient]);
+
   // Auto-save when stopping manually or finishing (if we had auto-finish)
   const handleStop = () => {
     if (totalTime > 0) {
