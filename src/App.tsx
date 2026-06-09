@@ -37,15 +37,25 @@ function App() {
   }, [isAmbientPlaying, selectedAmbient]);
 
   useEffect(() => {
+    const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        // pause ambient and mute background audio so it doesn't produce audible artifacts
-        audioManager.pauseAmbient();
-        audioManager.muteBackground();
+        if (isIOS) {
+          // pause ambient and mute background audio on iOS to avoid noisy artifacts
+          audioManager.pauseAmbient();
+          audioManager.muteBackground();
+        }
+        // On Android keep ambient and cues running to preserve session timing
       } else {
-        // unmute background and restore ambient if user had it enabled
-        audioManager.unmuteBackground();
-        if (isAmbientPlaying) audioManager.startAmbient(selectedAmbient);
+        if (isIOS) {
+          // unmute background and restore ambient if user had it enabled
+          audioManager.unmuteBackground();
+          if (isAmbientPlaying) audioManager.startAmbient(selectedAmbient);
+        } else {
+          // On Android/desktop, ensure ambient is running if user enabled it
+          if (isAmbientPlaying) audioManager.startAmbient(selectedAmbient);
+        }
       }
     };
 

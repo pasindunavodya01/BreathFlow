@@ -246,7 +246,8 @@ export class AudioManager {
 
   public playCue(phase: BreathingPhase) {
     if (!this.audioContext) return;
-    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return; // don't play cues while backgrounded/locked
+    const isAndroid = typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && !isAndroid) return; // allow cues on Android when backgrounded
 
     const osc = this.audioContext.createOscillator();
     const gain = this.audioContext.createGain();

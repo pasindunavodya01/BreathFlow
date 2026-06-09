@@ -9,13 +9,14 @@ export const useWakeLock = () => {
   const isNativeSupported = typeof window !== 'undefined' && 'wakeLock' in navigator;
   const isSupported = isNativeSupported || typeof window !== 'undefined';
   const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = typeof window !== 'undefined' && /Android/.test(navigator.userAgent);
 
   const requestNoSleep = useCallback(async () => {
-    if (typeof window === 'undefined' || !isIOS) return;
+    if (typeof window === 'undefined' || !(isIOS || isAndroid)) return;
     try {
       await audioManager.start();
       setUsingFallback(true);
-      console.log('Fallback audioManager started for wake lock (iOS)');
+      console.log('Fallback audioManager started for wake lock (mobile)');
     } catch (err) {
       console.warn('Fallback audioManager failed to start', err);
     }
