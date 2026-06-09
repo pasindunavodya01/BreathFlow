@@ -23,9 +23,22 @@ export class AudioManager {
     // Create an audio element for background keep-alive
     // This needs to be a real file or a generated blob to work well on mobile
     // For now, we'll keep the silent audio element as a fallback for session persistence.
-    this.backgroundAudio = new Audio();
-    this.backgroundAudio.loop = true;
-    this.backgroundAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////////////////////////////////////wAAAP//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAAAAAAAAAAAAACCAAAAAAAAAAAAAAAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////////////////////////////////////w==';
+    // Generate a very low-volume noise WAV blob and use it as the background audio source.
+    // iOS PWAs often ignore truly silent tracks; a tiny audible (very low volume) loop is more reliable.
+    try {
+      const blob = this.generateNoiseBlob(2);
+      this.backgroundAudio = new Audio(URL.createObjectURL(blob));
+      this.backgroundAudio.loop = true;
+      this.backgroundAudio.volume = 0.02; // keep it inaudible but non-zero
+      // Ensure playsinline for mobile playback policies
+      (this.backgroundAudio as any).playsInline = true;
+      this.backgroundAudio.setAttribute('playsinline', 'true');
+    } catch (e) {
+      // Fallback to the previous silent data URI if generation fails
+      this.backgroundAudio = new Audio();
+      this.backgroundAudio.loop = true;
+      this.backgroundAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////////////////////////////////////wAAAP//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAAAAAAAAAAAAACCAAAAAAAAAAAAAAAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////////////////////////////////////w==';
+    }
   }
 
   public async start() {
@@ -159,6 +172,60 @@ export class AudioManager {
     }
 
     this.ambientType = null;
+  }
+
+  private generateNoiseBlob(durationSeconds = 2): Blob {
+    const sampleRate = 44100;
+    const length = sampleRate * durationSeconds;
+    const channels = 1;
+
+    const buffer = new Float32Array(length * channels);
+    // low amplitude noise so it's effectively inaudible but counts as audio
+    for (let i = 0; i < buffer.length; i++) {
+      buffer[i] = (Math.random() * 2 - 1) * 0.02; // very low amplitude
+    }
+
+    // Encode WAV (16-bit PCM)
+    const bytesPerSample = 2;
+    const blockAlign = channels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = buffer.length * bytesPerSample;
+    const bufferSize = 44 + dataSize;
+    const arrayBuffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(arrayBuffer);
+
+    let offset = 0;
+    function writeString(s: string) {
+      for (let i = 0; i < s.length; i++) {
+        view.setUint8(offset + i, s.charCodeAt(i));
+      }
+      offset += s.length;
+    }
+
+    writeString('RIFF'); // ChunkID
+    view.setUint32(offset, 36 + dataSize, true); offset += 4; // ChunkSize
+    writeString('WAVE');
+    writeString('fmt ');
+    view.setUint32(offset, 16, true); offset += 4; // Subchunk1Size
+    view.setUint16(offset, 1, true); offset += 2; // AudioFormat (PCM)
+    view.setUint16(offset, channels, true); offset += 2; // NumChannels
+    view.setUint32(offset, sampleRate, true); offset += 4; // SampleRate
+    view.setUint32(offset, byteRate, true); offset += 4; // ByteRate
+    view.setUint16(offset, blockAlign, true); offset += 2; // BlockAlign
+    view.setUint16(offset, 16, true); offset += 2; // BitsPerSample
+    writeString('data');
+    view.setUint32(offset, dataSize, true); offset += 4; // Subchunk2Size
+
+    // Write PCM samples
+    let pos = offset;
+    for (let i = 0; i < buffer.length; i++) {
+      // clamp
+      let sample = Math.max(-1, Math.min(1, buffer[i]));
+      view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      pos += 2;
+    }
+
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
   }
 
   public playCue(phase: BreathingPhase) {

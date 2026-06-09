@@ -1,77 +1,36 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { audioManager } from '../utils/audio';
 
 export const useWakeLock = () => {
   // Using 'any' for wakeLock as standard TypeScript DOM libs sometimes lack WakeLockSentinel
   const [wakeLock, setWakeLock] = useState<any>(null);
-  const [usingNoSleep, setUsingNoSleep] = useState(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const oscillatorRef = useRef<OscillatorNode | null>(null);
-  const gainNodeRef = useRef<GainNode | null>(null);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   const isNativeSupported = typeof window !== 'undefined' && 'wakeLock' in navigator;
   const isSupported = isNativeSupported || typeof window !== 'undefined';
 
-  const releaseNoSleep = useCallback(async () => {
-    if (oscillatorRef.current) {
-      oscillatorRef.current.stop();
-      oscillatorRef.current.disconnect();
-      oscillatorRef.current = null;
+  const requestNoSleep = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      await audioManager.start();
+      setUsingFallback(true);
+      console.log('Fallback audioManager started for wake lock');
+    } catch (err) {
+      console.warn('Fallback audioManager failed to start', err);
     }
-
-    if (gainNodeRef.current) {
-      gainNodeRef.current.disconnect();
-      gainNodeRef.current = null;
-    }
-
-    if (audioContextRef.current) {
-      try {
-        await audioContextRef.current.close();
-      } catch {
-        // ignore close errors
-      }
-      audioContextRef.current = null;
-    }
-
-    setUsingNoSleep(false);
   }, []);
 
-  const requestNoSleep = useCallback(async () => {
-    if (usingNoSleep || typeof window === 'undefined') {
-      return;
-    }
-
-    const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined;
-    if (!AudioCtx) {
-      console.warn('NoSleep fallback unavailable: AudioContext not supported');
-      return;
-    }
-
-    const audioContext = new AudioCtx();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    gainNode.gain.value = 0;
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    oscillator.frequency.value = 1;
-
+  const releaseNoSleep = useCallback(async () => {
     try {
-      await audioContext.resume();
-      oscillator.start();
-
-      audioContextRef.current = audioContext;
-      oscillatorRef.current = oscillator;
-      gainNodeRef.current = gainNode;
-      setUsingNoSleep(true);
-      console.log('NoSleep fallback started');
+      audioManager.pause();
     } catch (err) {
-      console.error('NoSleep fallback failed', err);
-      await releaseNoSleep();
+      // ignore
     }
-  }, [releaseNoSleep, usingNoSleep]);
+    setUsingFallback(false);
+  }, []);
 
   const requestWakeLock = useCallback(async () => {
-    if (wakeLock !== null || usingNoSleep) {
+    if (wakeLock !== null) {
       return;
     }
 
@@ -93,7 +52,7 @@ export const useWakeLock = () => {
     }
 
     await requestNoSleep();
-  }, [isNativeSupported, requestNoSleep, wakeLock, usingNoSleep]);
+  }, [isNativeSupported, requestNoSleep, wakeLock, usingFallback]);
 
   const releaseWakeLock = useCallback(async () => {
     if (wakeLock !== null) {
@@ -107,7 +66,7 @@ export const useWakeLock = () => {
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      const lockActive = wakeLock !== null || usingNoSleep;
+      const lockActive = wakeLock !== null || usingFallback;
       if (lockActive && document.visibilityState === 'visible') {
         requestWakeLock();
       }
@@ -115,7 +74,7 @@ export const useWakeLock = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [usingNoSleep, wakeLock, requestWakeLock]);
+  }, [usingFallback, wakeLock, requestWakeLock]);
 
   useEffect(() => {
     return () => {
@@ -124,5 +83,7 @@ export const useWakeLock = () => {
     };
   }, [releaseWakeLock, releaseNoSleep]);
 
-  return { isSupported, requestWakeLock, releaseWakeLock };
+  const isNativeActive = wakeLock !== null;
+
+  return { isSupported, requestWakeLock, releaseWakeLock, usingFallback, isNativeActive };
 };

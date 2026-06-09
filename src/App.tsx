@@ -17,7 +17,7 @@ function App() {
   const [selectedAmbient, setSelectedAmbient] = useState<AmbientSound>('rain');
   
   const { phase, timeLeft, isActive, totalTime, start, pause, stop } = useBreathing(pattern);
-  const { requestWakeLock, releaseWakeLock } = useWakeLock();
+  const { requestWakeLock, releaseWakeLock, usingFallback, isNativeActive } = useWakeLock();
 
   useEffect(() => {
     if (isActive) {
@@ -71,6 +71,9 @@ function App() {
         </h1>
         <div className="flex items-center gap-2">
             <PiPVisualizer isActive={isActive} phase={phase} timeLeft={timeLeft} />
+            <div className="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+              {isNativeActive ? 'Wake: Native' : usingFallback ? 'Wake: Fallback' : 'Wake: Off'}
+            </div>
             <button
               onClick={() => setShowReports(true)}
               className="p-2 text-slate-400 hover:text-white transition-colors"
