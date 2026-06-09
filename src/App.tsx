@@ -6,12 +6,14 @@ import { MeditationTypes } from './components/MeditationTypes';
 import { CustomPatternEditor } from './components/CustomPatternEditor';
 import { Reports } from './components/Reports';
 import { PiPVisualizer } from './components/PiPVisualizer';
+import { audioManager } from './utils/audio';
 import { getSessions, saveSession } from './utils/storage';
 
 function App() {
   const [pattern, setPattern] = useState<BreathingPattern>(PRESETS[0]);
   const [showCustom, setShowCustom] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [isRainPlaying, setIsRainPlaying] = useState(false);
   
   const { phase, timeLeft, isActive, totalTime, start, pause, stop } = useBreathing(pattern);
   const { requestWakeLock, releaseWakeLock } = useWakeLock();
@@ -24,6 +26,14 @@ function App() {
     }
     return () => { releaseWakeLock(); };
   }, [isActive, requestWakeLock, releaseWakeLock]);
+
+  useEffect(() => {
+    if (isRainPlaying) {
+      audioManager.startAmbient();
+    } else {
+      audioManager.pauseAmbient();
+    }
+  }, [isRainPlaying]);
 
   // Auto-save when stopping manually or finishing (if we had auto-finish)
   const handleStop = () => {
@@ -123,6 +133,12 @@ function App() {
                     </button>
                 </>
             )}
+            <button
+              onClick={() => setIsRainPlaying((prev) => !prev)}
+              className={`w-16 h-16 rounded-full flex items-center justify-center border transition-all ${isRainPlaying ? 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500' : 'bg-slate-800 hover:bg-slate-700 border-slate-700'}`}
+            >
+              <span className="text-xl">{isRainPlaying ? '☔' : '🌧'}</span>
+            </button>
         </div>
 
         {/* Total Time */}
