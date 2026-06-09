@@ -120,8 +120,8 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex flex-col items-center justify-center min-h-screen p-6 pb-24">
-        <div className="mb-4 text-sm text-slate-400">
+      <main className="flex flex-col items-center justify-center min-h-screen p-6 pt-20 pb-24">
+        <div className="hidden md:flex mb-4 text-sm text-slate-400">
           <label className="mr-2">Duration (minutes):</label>
           <input
             type="number"
@@ -161,6 +161,18 @@ function App() {
 
         {/* Controls */}
         <div className="flex flex-wrap gap-6 mb-4 justify-center">
+            {/* Mobile-friendly duration input */}
+            <div className="flex items-center gap-2 md:hidden w-full justify-center mb-2">
+                <label className="text-sm text-slate-400">Dur:</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={sessionMinutes}
+                  onChange={(e) => setSessionMinutes(Math.max(0, Number(e.target.value || 0)))}
+                  className="w-16 px-2 py-1 rounded bg-slate-800 text-slate-100 border border-slate-700"
+                />
+                <span className="text-xs text-slate-400">min</span>
+            </div>
             {!isActive ? (
                 <button 
                     onClick={start}
