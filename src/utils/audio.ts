@@ -244,40 +244,127 @@ export class AudioManager {
     return new Blob([arrayBuffer], { type: 'audio/wav' });
   }
 
-  public playCue(phase: BreathingPhase) {
-    if (!this.audioContext) return;
-    const isAndroid = typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
-    if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && !isAndroid) return; // allow cues on Android when backgrounded
+  private generateToneBlob(frequency = 440, durationSeconds = 0.5, amplitude = 0.2): Blob {
+    const sampleRate = 44100;
+    const length = Math.floor(sampleRate * durationSeconds);
+    const channels = 1;
 
-    const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-
-    osc.connect(gain);
-    gain.connect(this.audioContext.destination);
-
-    // Different tones for different phases
-    switch (phase) {
-      case 'inhale':
-        osc.frequency.setValueAtTime(220, this.audioContext.currentTime); // A3
-        osc.frequency.linearRampToValueAtTime(440, this.audioContext.currentTime + 2); // Slide up
-        break;
-      case 'hold-in':
-      case 'hold-out':
-        osc.frequency.setValueAtTime(440, this.audioContext.currentTime); // A4
-        break;
-      case 'exhale':
-        osc.frequency.setValueAtTime(440, this.audioContext.currentTime); // A4
-        osc.frequency.linearRampToValueAtTime(220, this.audioContext.currentTime + 2); // Slide down
-        break;
+    const buffer = new Float32Array(length * channels);
+    for (let i = 0; i < buffer.length; i++) {
+      const t = i / sampleRate;
+      buffer[i] = Math.sin(2 * Math.PI * frequency * t) * amplitude;
     }
 
-    gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 1.5);
+    // Encode WAV (16-bit PCM)
+    const bytesPerSample = 2;
+    const blockAlign = channels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = buffer.length * bytesPerSample;
+    const bufferSize = 44 + dataSize;
+    const arrayBuffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(arrayBuffer);
 
-    osc.start();
-    osc.stop(this.audioContext.currentTime + 2);
+    let offset = 0;
+    function writeString(s: string) {
+      for (let i = 0; i < s.length; i++) {
+        view.setUint8(offset + i, s.charCodeAt(i));
+      }
+      offset += s.length;
+    }
 
-    this.updateMediaSession(phase);
+    writeString('RIFF');
+    view.setUint32(offset, 36 + dataSize, true); offset += 4;
+    writeString('WAVE');
+    writeString('fmt ');
+    view.setUint32(offset, 16, true); offset += 4;
+    view.setUint16(offset, 1, true); offset += 2;
+    view.setUint16(offset, channels, true); offset += 2;
+    view.setUint32(offset, sampleRate, true); offset += 4;
+    view.setUint32(offset, byteRate, true); offset += 4;
+    view.setUint16(offset, blockAlign, true); offset += 2;
+    view.setUint16(offset, 16, true); offset += 2;
+    writeString('data');
+    view.setUint32(offset, dataSize, true); offset += 4;
+
+    let pos = offset;
+    for (let i = 0; i < buffer.length; i++) {
+      let sample = Math.max(-1, Math.min(1, buffer[i]));
+      view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      pos += 2;
+    }
+
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+  }
+
+  public async playCue(phase: BreathingPhase) {
+    if (!this.audioContext) return;
+    const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+    // When hidden, only block cues on iOS; allow cues on Android and desktop/web
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible' && isIOS) return;
+
+    // Ensure the AudioContext is running; on some platforms it may be suspended when backgrounded
+    try {
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+    } catch (e) {
+      // ignore resume failures
+    }
+    // If the AudioContext is running and available, try oscillator cue first
+    if (this.audioContext.state === 'running') {
+      try {
+        const osc = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+
+        // Different tones for different phases
+        switch (phase) {
+          case 'inhale':
+            osc.frequency.setValueAtTime(220, this.audioContext.currentTime); // A3
+            osc.frequency.linearRampToValueAtTime(440, this.audioContext.currentTime + 2); // Slide up
+            break;
+          case 'hold-in':
+          case 'hold-out':
+            osc.frequency.setValueAtTime(440, this.audioContext.currentTime); // A4
+            break;
+          case 'exhale':
+            osc.frequency.setValueAtTime(440, this.audioContext.currentTime); // A4
+            osc.frequency.linearRampToValueAtTime(220, this.audioContext.currentTime + 2); // Slide down
+            break;
+        }
+
+        gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 1.5);
+
+        osc.start();
+        osc.stop(this.audioContext.currentTime + 2);
+
+        this.updateMediaSession(phase);
+        return;
+      } catch (err) {
+        // Fall through to HTMLAudioElement fallback
+      }
+    }
+
+    // Fallback: use a short WAV blob played via HTMLAudioElement which is more likely
+    // to play when the tab is backgrounded in some desktop browsers.
+    try {
+      const freq = phase === 'inhale' ? 330 : phase === 'exhale' ? 220 : 440;
+      const blob = this.generateToneBlob(freq, 0.6, 0.18);
+      const url = URL.createObjectURL(blob);
+      const a = new Audio(url);
+      a.volume = 0.9;
+      (a as any).playsInline = true;
+      a.play().catch(() => {});
+      a.addEventListener('ended', () => { URL.revokeObjectURL(url); });
+      // Revoke after a short timeout in case 'ended' isn't fired
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 3000);
+      this.updateMediaSession(phase);
+    } catch (e) {
+      // ignore
+    }
   }
 
   private updateMediaSession(phase: BreathingPhase) {

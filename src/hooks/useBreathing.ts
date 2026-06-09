@@ -8,8 +8,12 @@ export interface BreathingState {
   isActive: boolean;
   totalTime: number;
 }
+interface UseBreathingOptions {
+  targetSeconds?: number | null;
+  onFinish?: (finalSeconds: number) => void;
+}
 
-export const useBreathing = (pattern: BreathingPattern) => {
+export const useBreathing = (pattern: BreathingPattern, options?: UseBreathingOptions) => {
   const [phase, setPhase] = useState<BreathingPhase>('inhale');
   const [timeLeft, setTimeLeft] = useState(pattern.inhale);
   const [totalTime, setTotalTime] = useState(0);
@@ -23,7 +27,7 @@ export const useBreathing = (pattern: BreathingPattern) => {
 
     workerRef.current.onmessage = (e) => {
       const { type, phase: newPhase, timeLeft: newTimeLeft, totalTime: newTotalTime } = e.data;
-      
+
       if (type === 'TICK') {
         setTimeLeft(newTimeLeft);
         setTotalTime(newTotalTime);
@@ -31,7 +35,13 @@ export const useBreathing = (pattern: BreathingPattern) => {
         setPhase(newPhase);
         audioManager.playCue(newPhase);
       } else if (type === 'STOPPED') {
-         // handle stop
+        // worker signalled session end
+        const finalSeconds = e.data?.totalTime ?? 0;
+        setIsActive(false);
+        setPhase('inhale');
+        setTimeLeft(pattern.inhale);
+        setTotalTime(0);
+        if (options?.onFinish) options.onFinish(finalSeconds);
       }
     };
 
@@ -43,14 +53,14 @@ export const useBreathing = (pattern: BreathingPattern) => {
   // When pattern changes, configure the worker
   useEffect(() => {
     if (workerRef.current) {
-      workerRef.current.postMessage({ type: 'CONFIGURE', payload: pattern });
+      workerRef.current.postMessage({ type: 'CONFIGURE', payload: { pattern, targetSeconds: options?.targetSeconds ?? null } });
       // Reset local state for display
       if (!isActive) {
           setPhase('inhale');
           setTimeLeft(pattern.inhale);
       }
     }
-  }, [pattern, isActive]);
+  }, [pattern, isActive, options?.targetSeconds]);
 
   const start = useCallback(() => {
     if (isActive) return;

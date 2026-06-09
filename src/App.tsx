@@ -15,9 +15,18 @@ function App() {
   const [showReports, setShowReports] = useState(false);
   const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
   const [selectedAmbient, setSelectedAmbient] = useState<AmbientSound>('rain');
+  const [sessionMinutes, setSessionMinutes] = useState<number>(0);
   
-  const { phase, timeLeft, isActive, totalTime, start, pause, stop } = useBreathing(pattern);
   const { requestWakeLock, releaseWakeLock, usingFallback, isNativeActive } = useWakeLock();
+  const { phase, timeLeft, isActive, totalTime, start, pause, stop } = useBreathing(pattern, {
+    targetSeconds: sessionMinutes > 0 ? sessionMinutes * 60 : null,
+    onFinish: (finalSeconds: number) => {
+      // save and cleanup when session time ends
+      if (finalSeconds > 0) saveSession(finalSeconds, pattern.name);
+      audioManager.pauseAmbient();
+      releaseWakeLock();
+    }
+  });
 
   useEffect(() => {
     if (isActive) {
@@ -46,7 +55,7 @@ function App() {
           audioManager.pauseAmbient();
           audioManager.muteBackground();
         }
-        // On Android keep ambient and cues running to preserve session timing
+        // On Android/web keep ambient and cues running to preserve session timing
       } else {
         if (isIOS) {
           // unmute background and restore ambient if user had it enabled
@@ -112,6 +121,17 @@ function App() {
 
       {/* Main Content */}
       <main className="flex flex-col items-center justify-center min-h-screen p-6 pb-24">
+        <div className="mb-4 text-sm text-slate-400">
+          <label className="mr-2">Duration (minutes):</label>
+          <input
+            type="number"
+            min={0}
+            value={sessionMinutes}
+            onChange={(e) => setSessionMinutes(Math.max(0, Number(e.target.value || 0)))}
+            className="w-20 px-2 py-1 rounded bg-slate-800 text-slate-100 border border-slate-700"
+          />
+          <span className="ml-3 text-xs opacity-80">0 = unlimited</span>
+        </div>
         
         {/* Breathing Circle */}
         <div className="relative w-64 h-64 flex items-center justify-center mb-12">

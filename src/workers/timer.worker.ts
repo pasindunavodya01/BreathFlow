@@ -28,6 +28,7 @@ let state: TimerState = {
   totalTime: 0,
   isActive: false,
 };
+let targetSeconds: number | null = null;
 
 let lastTick = Date.now();
 
@@ -73,6 +74,19 @@ const tick = () => {
     postMessage({ type: 'PHASE_CHANGE', phase: state.phase, duration: duration / 1000 });
   }
 
+  // Check for target session end (in seconds)
+  if (targetSeconds !== null) {
+    if (state.totalTime >= targetSeconds * 1000) {
+      // Stop the session
+      state.isActive = false;
+      state.phase = 'inhale';
+      state.timeLeft = state.pattern.inhale * 1000;
+      if (intervalId) clearInterval(intervalId);
+      postMessage({ type: 'STOPPED', totalTime: Math.floor(state.totalTime / 1000) });
+      return;
+    }
+  }
+
   postMessage({ 
     type: 'TICK', 
     timeLeft: Math.ceil(state.timeLeft / 1000), 
@@ -85,7 +99,14 @@ self.onmessage = (e) => {
 
   switch (type) {
     case 'CONFIGURE':
-      state.pattern = payload;
+      // payload may be either a pattern object or { pattern, targetSeconds }
+      if (payload && payload.pattern) {
+        state.pattern = payload.pattern;
+        targetSeconds = payload.targetSeconds ?? null;
+      } else {
+        state.pattern = payload;
+        targetSeconds = null;
+      }
       state.phase = 'inhale';
       state.timeLeft = state.pattern.inhale * 1000;
       state.totalTime = 0;
@@ -105,9 +126,10 @@ self.onmessage = (e) => {
       state.isActive = false;
       state.phase = 'inhale';
       state.timeLeft = state.pattern.inhale * 1000;
+      const finalTotal = state.totalTime;
       state.totalTime = 0;
       if (intervalId) clearInterval(intervalId);
-      postMessage({ type: 'STOPPED' });
+      postMessage({ type: 'STOPPED', totalTime: Math.floor(finalTotal / 1000) });
       break;
   }
 };
