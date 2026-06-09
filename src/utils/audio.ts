@@ -1,10 +1,13 @@
 import type { BreathingPhase } from '../types/breathing';
 
+export type AmbientSound = 'rain' | 'waves' | 'wind';
+
 export class AudioManager {
   private audioContext: AudioContext | null = null;
   private backgroundAudio: HTMLAudioElement | null = null;
   private ambientSource: AudioBufferSourceNode | null = null;
   private ambientGain: GainNode | null = null;
+  private ambientType: AmbientSound | null = null;
 
   constructor() {
     this.init();
@@ -51,13 +54,13 @@ export class AudioManager {
     }
   }
 
-  private createRainNoiseBuffer(): AudioBuffer {
+  private createWhiteNoiseBuffer(durationSeconds = 3): AudioBuffer {
     if (!this.audioContext) {
       throw new Error('AudioContext is not initialized');
     }
 
-    const durationSeconds = 2;
-    const buffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * durationSeconds, this.audioContext.sampleRate);
+    const sampleRate = this.audioContext.sampleRate;
+    const buffer = this.audioContext.createBuffer(1, sampleRate * durationSeconds, sampleRate);
     const data = buffer.getChannelData(0);
 
     for (let i = 0; i < data.length; i += 1) {
@@ -67,31 +70,76 @@ export class AudioManager {
     return buffer;
   }
 
-  public async startAmbient(volume = 0.16) {
+  private createAmbientNodes(type: AmbientSound): { source: AudioBufferSourceNode; inputNode: AudioNode } {
+    if (!this.audioContext) {
+      throw new Error('AudioContext is not initialized');
+    }
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = this.createWhiteNoiseBuffer(4);
+    source.loop = true;
+
+    let inputNode: AudioNode = source;
+
+    const filter = this.audioContext.createBiquadFilter();
+
+    switch (type) {
+      case 'rain':
+        filter.type = 'highpass';
+        filter.frequency.value = 600;
+        filter.Q.value = 0.8;
+        source.connect(filter);
+        inputNode = filter;
+        break;
+      case 'waves':
+        filter.type = 'lowpass';
+        filter.frequency.value = 800;
+        filter.Q.value = 0.7;
+        source.connect(filter);
+        inputNode = filter;
+        break;
+      case 'wind':
+        filter.type = 'lowpass';
+        filter.frequency.value = 500;
+        filter.Q.value = 0.5;
+        source.connect(filter);
+        inputNode = filter;
+        break;
+    }
+
+    return { source, inputNode };
+  }
+
+  public async startAmbient(type: AmbientSound = 'rain', volume = 0.16) {
     this.createAudioContext();
 
-    if (!this.audioContext || this.ambientSource) {
+    if (!this.audioContext) {
       return;
+    }
+
+    if (this.ambientSource && this.ambientType === type) {
+      return;
+    }
+
+    if (this.ambientSource) {
+      this.pauseAmbient();
     }
 
     if (this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
     }
 
-    const ambientBuffer = this.createRainNoiseBuffer();
-    const source = this.audioContext.createBufferSource();
-    source.buffer = ambientBuffer;
-    source.loop = true;
-
+    const { source, inputNode } = this.createAmbientNodes(type);
     const gain = this.audioContext.createGain();
     gain.gain.value = volume;
 
-    source.connect(gain);
+    inputNode.connect(gain);
     gain.connect(this.audioContext.destination);
 
     source.start();
     this.ambientSource = source;
     this.ambientGain = gain;
+    this.ambientType = type;
   }
 
   public pauseAmbient() {
@@ -109,6 +157,8 @@ export class AudioManager {
       this.ambientGain.disconnect();
       this.ambientGain = null;
     }
+
+    this.ambientType = null;
   }
 
   public playCue(phase: BreathingPhase) {

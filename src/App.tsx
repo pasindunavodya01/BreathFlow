@@ -6,14 +6,15 @@ import { MeditationTypes } from './components/MeditationTypes';
 import { CustomPatternEditor } from './components/CustomPatternEditor';
 import { Reports } from './components/Reports';
 import { PiPVisualizer } from './components/PiPVisualizer';
-import { audioManager } from './utils/audio';
+import { audioManager, type AmbientSound } from './utils/audio';
 import { getSessions, saveSession } from './utils/storage';
 
 function App() {
   const [pattern, setPattern] = useState<BreathingPattern>(PRESETS[0]);
   const [showCustom, setShowCustom] = useState(false);
   const [showReports, setShowReports] = useState(false);
-  const [isRainPlaying, setIsRainPlaying] = useState(false);
+  const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
+  const [selectedAmbient, setSelectedAmbient] = useState<AmbientSound>('rain');
   
   const { phase, timeLeft, isActive, totalTime, start, pause, stop } = useBreathing(pattern);
   const { requestWakeLock, releaseWakeLock } = useWakeLock();
@@ -28,12 +29,12 @@ function App() {
   }, [isActive, requestWakeLock, releaseWakeLock]);
 
   useEffect(() => {
-    if (isRainPlaying) {
-      audioManager.startAmbient();
+    if (isAmbientPlaying) {
+      audioManager.startAmbient(selectedAmbient);
     } else {
       audioManager.pauseAmbient();
     }
-  }, [isRainPlaying]);
+  }, [isAmbientPlaying, selectedAmbient]);
 
   // Auto-save when stopping manually or finishing (if we had auto-finish)
   const handleStop = () => {
@@ -109,7 +110,7 @@ function App() {
         </div>
 
         {/* Controls */}
-        <div className="flex gap-6 mb-12">
+        <div className="flex flex-wrap gap-6 mb-4 justify-center">
             {!isActive ? (
                 <button 
                     onClick={start}
@@ -134,11 +135,28 @@ function App() {
                 </>
             )}
             <button
-              onClick={() => setIsRainPlaying((prev) => !prev)}
-              className={`w-16 h-16 rounded-full flex items-center justify-center border transition-all ${isRainPlaying ? 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500' : 'bg-slate-800 hover:bg-slate-700 border-slate-700'}`}
+              onClick={() => setIsAmbientPlaying((prev) => !prev)}
+              className={`w-16 h-16 rounded-full flex items-center justify-center border transition-all ${isAmbientPlaying ? 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500' : 'bg-slate-800 hover:bg-slate-700 border-slate-700'}`}
             >
-              <span className="text-xl">{isRainPlaying ? '☔' : '🌧'}</span>
+              <span className="text-xl">{isAmbientPlaying ? '🔊' : '🔇'}</span>
             </button>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-2 mb-12">
+            {([
+              { id: 'rain', label: 'Rain', emoji: '☔' },
+              { id: 'waves', label: 'Waves', emoji: '🌊' },
+              { id: 'wind', label: 'Wind', emoji: '🍃' },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                onClick={() => setSelectedAmbient(option.id)}
+                className={`px-3 py-2 rounded-full border text-sm font-semibold transition-colors ${selectedAmbient === option.id ? 'bg-slate-700 border-blue-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+              >
+                <span className="mr-2">{option.emoji}</span>
+                {option.label}
+              </button>
+            ))}
         </div>
 
         {/* Total Time */}
