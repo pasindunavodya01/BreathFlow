@@ -19,13 +19,23 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // 1. Skip non-HTTP(S) requests (e.g., chrome-extension://, ws:// for Vite HMR)
+  if (!(event.request.url.startsWith('http:') || event.request.url.startsWith('https:'))) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(function(response) {
         if (response) {
           return response; // Cache hit - return response
         }
-        return fetch(event.request);
+        
+        // 2. Fetch from network and handle genuine network failures (offline)
+        return fetch(event.request).catch(error => {
+          console.error('Fetch failed; returning offline page instead.', error);
+          // You can return a custom offline HTML page here if you cache one.
+        });
       })
   );
 });

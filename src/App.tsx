@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBreathing } from './hooks/useBreathing';
 import { useWakeLock } from './hooks/useWakeLock';
 import { type BreathingPattern, PRESETS } from './types/breathing';
@@ -17,12 +17,18 @@ function App() {
   const [selectedAmbient, setSelectedAmbient] = useState<AmbientSound>('rain');
   const [sessionMinutes, setSessionMinutes] = useState<number>(0);
   
+  // Use a ref to always keep track of the latest pattern to avoid stale closures inside the breathing timer
+  const patternRef = useRef(pattern);
+  useEffect(() => {
+    patternRef.current = pattern;
+  }, [pattern]);
+
   const { requestWakeLock, releaseWakeLock, usingFallback, isNativeActive } = useWakeLock();
   const { phase, timeLeft, isActive, totalTime, start, pause, stop } = useBreathing(pattern, {
     targetSeconds: sessionMinutes > 0 ? sessionMinutes * 60 : null,
     onFinish: (finalSeconds: number) => {
       // save and cleanup when session time ends
-      if (finalSeconds > 0) saveSession(finalSeconds, pattern.name);
+      if (finalSeconds > 0) saveSession(finalSeconds, patternRef.current.name);
       audioManager.pauseAmbient();
       releaseWakeLock();
     }
@@ -75,7 +81,7 @@ function App() {
   // Auto-save when stopping manually or finishing (if we had auto-finish)
   const handleStop = () => {
     if (totalTime > 0) {
-        saveSession(totalTime, pattern.name);
+        saveSession(totalTime, patternRef.current.name);
     }
     stop();
   };
